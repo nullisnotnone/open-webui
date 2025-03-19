@@ -378,7 +378,7 @@ export const findWordIndices = (text) => {
 };
 
 export const removeLastWordFromString = (inputString, wordString) => {
-	console.log('inputString', inputString);
+	console.log('inputString', inputString, wordString);
 	// Split the string by newline characters to handle lines separately
 	const lines = inputString.split('\n');
 

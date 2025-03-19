@@ -229,7 +229,7 @@
 
 <div
 	bind:this={itemElement}
-	class=" w-full {className} relative group"
+	class=" w-full {className} text-base text-gray-500 relative group"
 	draggable={draggable && !confirmEdit}
 >
 	{#if confirmEdit}
@@ -278,7 +278,7 @@
 			draggable="false"
 		>
 			<div class=" flex self-center flex-1 w-full">
-				<div dir="auto" class="text-left self-center overflow-hidden w-full h-[20px]">
+				<div dir="auto" class="text-left self-center overflow-hidden w-full h-[30px]">
 					{title}
 				</div>
 			</div>
@@ -286,158 +286,161 @@
 	{/if}
 
 	<!-- svelte-ignore a11y-no-static-element-interactions -->
-	<div
-		class="
+   {#if 0 > 1}
+      <div
+    class="
         {id === $chatId || confirmEdit
-			? 'from-gray-200 dark:from-gray-900'
-			: selected
-				? 'from-gray-100 dark:from-gray-950'
-				: 'invisible group-hover:visible from-gray-100 dark:from-gray-950'}
+      ? 'from-gray-200 dark:from-gray-900'
+      : selected
+        ? 'from-gray-100 dark:from-gray-950'
+        : 'invisible group-hover:visible from-gray-100 dark:from-gray-950'}
             absolute {className === 'pr-2'
-			? 'right-[8px]'
-			: 'right-0'}  top-[4px] py-1 pr-0.5 mr-1.5 pl-5 bg-linear-to-l from-80%
+      ? 'right-[8px]'
+      : 'right-0'}  top-[4px] py-1 pr-0.5 mr-1.5 pl-5 bg-linear-to-l from-80%
 
               to-transparent"
-		on:mouseenter={(e) => {
-			mouseOver = true;
-		}}
-		on:mouseleave={(e) => {
-			mouseOver = false;
-		}}
-	>
-		{#if confirmEdit}
-			<div
-				class="flex self-center items-center space-x-1.5 z-10 translate-y-[0.5px] -translate-x-[0.5px]"
-			>
-				<Tooltip content={$i18n.t('Confirm')}>
-					<button
-						class=" self-center dark:hover:text-white transition"
-						on:click={() => {
-							editChatTitle(id, chatTitle);
-							confirmEdit = false;
-							chatTitle = '';
-						}}
-					>
-						<Check className=" size-3.5" strokeWidth="2.5" />
-					</button>
-				</Tooltip>
+    on:mouseenter={(e) => {
+      mouseOver = true;
+    }}
+    on:mouseleave={(e) => {
+      mouseOver = false;
+    }}
+  >
+    {#if confirmEdit}
+      <div
+        class="flex self-center items-center space-x-1.5 z-10 translate-y-[0.5px] -translate-x-[0.5px]"
+      >
+        <Tooltip content={$i18n.t('Confirm')}>
+          <button
+            class=" self-center dark:hover:text-white transition"
+            on:click={() => {
+              editChatTitle(id, chatTitle);
+              confirmEdit = false;
+              chatTitle = '';
+            }}
+          >
+            <Check className=" size-3.5" strokeWidth="2.5" />
+          </button>
+        </Tooltip>
 
-				<Tooltip content={$i18n.t('Cancel')}>
-					<button
-						class=" self-center dark:hover:text-white transition"
-						on:click={() => {
-							confirmEdit = false;
-							chatTitle = '';
-						}}
-					>
-						<XMark strokeWidth="2.5" />
-					</button>
-				</Tooltip>
-			</div>
-		{:else if shiftKey && mouseOver}
-			<div class=" flex items-center self-center space-x-1.5">
-				<Tooltip content={$i18n.t('Archive')} className="flex items-center">
-					<button
-						class=" self-center dark:hover:text-white transition"
-						on:click={() => {
-							archiveChatHandler(id);
-						}}
-						type="button"
-					>
-						<ArchiveBox className="size-4  translate-y-[0.5px]" strokeWidth="2" />
-					</button>
-				</Tooltip>
+        <Tooltip content={$i18n.t('Cancel')}>
+          <button
+            class=" self-center dark:hover:text-white transition"
+            on:click={() => {
+              confirmEdit = false;
+              chatTitle = '';
+            }}
+          >
+            <XMark strokeWidth="2.5" />
+          </button>
+        </Tooltip>
+      </div>
+    {:else if shiftKey && mouseOver}
+      <div class=" flex items-center self-center space-x-1.5">
+        <Tooltip content={$i18n.t('Archive')} className="flex items-center">
+          <button
+            class=" self-center dark:hover:text-white transition"
+            on:click={() => {
+              archiveChatHandler(id);
+            }}
+            type="button"
+          >
+            <ArchiveBox className="size-4  translate-y-[0.5px]" strokeWidth="2" />
+          </button>
+        </Tooltip>
 
-				<Tooltip content={$i18n.t('Delete')}>
-					<button
-						class=" self-center dark:hover:text-white transition"
-						on:click={() => {
-							deleteChatHandler(id);
-						}}
-						type="button"
-					>
-						<GarbageBin strokeWidth="2" />
-					</button>
-				</Tooltip>
-			</div>
-		{:else}
-			<div class="flex self-center space-x-1 z-10">
-				<ChatMenu
-					chatId={id}
-					cloneChatHandler={() => {
-						cloneChatHandler(id);
-					}}
-					shareHandler={() => {
-						showShareChatModal = true;
-					}}
-					archiveChatHandler={() => {
-						archiveChatHandler(id);
-					}}
-					renameHandler={async () => {
-						chatTitle = title;
-						confirmEdit = true;
+        <Tooltip content={$i18n.t('Delete')}>
+          <button
+            class=" self-center dark:hover:text-white transition"
+            on:click={() => {
+              deleteChatHandler(id);
+            }}
+            type="button"
+          >
+            <GarbageBin strokeWidth="2" />
+          </button>
+        </Tooltip>
+      </div>
+    {:else}
+      <div class="flex self-center space-x-1 z-10">
+        <ChatMenu
+          chatId={id}
+          cloneChatHandler={() => {
+            cloneChatHandler(id);
+          }}
+          shareHandler={() => {
+            showShareChatModal = true;
+          }}
+          archiveChatHandler={() => {
+            archiveChatHandler(id);
+          }}
+          renameHandler={async () => {
+            chatTitle = title;
+            confirmEdit = true;
 
-						await tick();
-						const input = document.getElementById(`chat-title-input-${id}`);
-						if (input) {
-							input.focus();
-						}
-					}}
-					deleteHandler={() => {
-						showDeleteConfirm = true;
-					}}
-					onClose={() => {
-						dispatch('unselect');
-					}}
-					on:change={async () => {
-						dispatch('change');
-					}}
-					on:tag={(e) => {
-						dispatch('tag', e.detail);
-					}}
-				>
-					<button
-						aria-label="Chat Menu"
-						class=" self-center dark:hover:text-white transition"
-						on:click={() => {
-							dispatch('select');
-						}}
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 16 16"
-							fill="currentColor"
-							class="w-4 h-4"
-						>
-							<path
-								d="M2 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM6.5 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM12.5 6.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z"
-							/>
-						</svg>
-					</button>
-				</ChatMenu>
+            await tick();
+            const input = document.getElementById(`chat-title-input-${id}`);
+            if (input) {
+              input.focus();
+            }
+          }}
+          deleteHandler={() => {
+            showDeleteConfirm = true;
+          }}
+          onClose={() => {
+            dispatch('unselect');
+          }}
+          on:change={async () => {
+            dispatch('change');
+          }}
+          on:tag={(e) => {
+            dispatch('tag', e.detail);
+          }}
+        >
+          <button
+            aria-label="Chat Menu"
+            class=" self-center dark:hover:text-white transition"
+            on:click={() => {
+              dispatch('select');
+            }}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 16 16"
+              fill="currentColor"
+              class="w-4 h-4"
+            >
+              <path
+                d="M2 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM6.5 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM12.5 6.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z"
+              />
+            </svg>
+          </button>
+        </ChatMenu>
 
-				{#if id === $chatId}
-					<!-- Shortcut support using "delete-chat-button" id -->
-					<button
-						id="delete-chat-button"
-						class="hidden"
-						on:click={() => {
-							showDeleteConfirm = true;
-						}}
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 16 16"
-							fill="currentColor"
-							class="w-4 h-4"
-						>
-							<path
-								d="M2 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM6.5 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM12.5 6.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z"
-							/>
-						</svg>
-					</button>
-				{/if}
-			</div>
-		{/if}
-	</div>
+        {#if id === $chatId}
+          <!-- Shortcut support using "delete-chat-button" id -->
+          <button
+            id="delete-chat-button"
+            class="hidden"
+            on:click={() => {
+              showDeleteConfirm = true;
+            }}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 16 16"
+              fill="currentColor"
+              class="w-4 h-4"
+            >
+              <path
+                d="M2 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM6.5 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM12.5 6.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z"
+              />
+            </svg>
+          </button>
+        {/if}
+      </div>
+    {/if}
+      </div>
+   {/if}
+	
 </div>

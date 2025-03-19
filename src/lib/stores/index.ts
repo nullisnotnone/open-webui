@@ -81,6 +81,13 @@ export const playingNotificationSound = writable(false);
 
 export type Model = OpenAIModel | OllamaModel;
 
+export type TypeBtnInfo = {
+  typePart: string
+  name: string
+  id: string
+  icon?: string
+}
+
 type BaseModel = {
 	id: string;
 	name: string;
@@ -188,6 +195,7 @@ type Document = {
 	filename: string;
 	name: string;
 	title: string;
+  id?:string;
 };
 
 type Config = {
@@ -231,3 +239,4 @@ type SessionUser = {
 	role: string;
 	profile_image_url: string;
 };
+

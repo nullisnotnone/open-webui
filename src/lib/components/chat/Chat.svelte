@@ -1622,6 +1622,8 @@
 			},
 			`${WEBUI_BASE_URL}/api`
 		).catch((error) => {
+      
+      console.log('error:', error)
 			toast.error(`${error}`);
 
 			responseMessage.error = {
@@ -1915,25 +1917,27 @@
 				class="absolute top-0 left-0 w-full h-full bg-linear-to-t from-white to-white/85 dark:from-gray-900 dark:to-gray-900/90 z-0"
 			/>
 		{/if}
-
-		<Navbar
-			bind:this={navbarElement}
-			chat={{
-				id: $chatId,
-				chat: {
-					title: $chatTitle,
-					models: selectedModels,
-					system: $settings.system ?? undefined,
-					params: params,
-					history: history,
-					timestamp: Date.now()
-				}
-			}}
-			title={$chatTitle}
-			bind:selectedModels
-			shareEnabled={!!history.currentId}
-			{initNewChat}
-		/>
+    {#if 1 > 0}
+      <Navbar
+        bind:this={navbarElement}
+        chat={{
+          id: $chatId,
+          chat: {
+            title: $chatTitle,
+            models: selectedModels,
+            system: $settings.system ?? undefined,
+            params: params,
+            history: history,
+            timestamp: Date.now()
+          }
+        }}
+        title={$chatTitle}
+        bind:selectedModels
+        shareEnabled={!!history.currentId}
+        {initNewChat}
+      />
+    {/if}
+		
 
 		<PaneGroup direction="horizontal" class="w-full h-full">
 			<Pane defaultSize={50} class="h-full flex w-full relative">

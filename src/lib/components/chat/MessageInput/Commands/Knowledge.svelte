@@ -15,6 +15,7 @@
 	export let prompt = '';
 	export let command = '';
 
+
 	const dispatch = createEventDispatcher();
 	let selectedIdx = 0;
 

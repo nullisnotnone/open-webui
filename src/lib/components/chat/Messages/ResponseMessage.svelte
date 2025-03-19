@@ -814,7 +814,7 @@
 					</div>
 				</div>
 
-				{#if !edit}
+				{#if 0 > 1 && !edit}
 					<div
 						bind:this={buttonsContainerElement}
 						class="flex justify-start overflow-x-auto buttons text-gray-600 dark:text-gray-500 mt-0.5"

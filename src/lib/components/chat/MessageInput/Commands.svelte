@@ -77,7 +77,7 @@
 					});
 				}}
 				on:select={(e) => {
-					console.log(e);
+					console.log('select:', e);
 					if (files.find((f) => f.id === e.detail.id)) {
 						return;
 					}

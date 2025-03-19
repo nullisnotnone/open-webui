@@ -20,8 +20,18 @@
 		showControls,
 		TTSWorker
 	} from '$lib/stores';
+	import type { TypeBtnInfo } from '$lib/stores';
 
-	import { blobToFile, compressImage, createMessagesList, findWordIndices } from '$lib/utils';
+	import { knowledge } from '$lib/stores';
+	import { getKnowledgeBases } from '$lib/apis/knowledge';
+
+	import {
+		blobToFile,
+		compressImage,
+		createMessagesList,
+		findWordIndices,
+		removeLastWordFromString
+	} from '$lib/utils';
 	import { transcribeAudio } from '$lib/apis/audio';
 	import { uploadFile } from '$lib/apis/files';
 	import { generateAutoCompletion } from '$lib/apis';
@@ -38,6 +48,8 @@
 	import Tooltip from '../common/Tooltip.svelte';
 	import FileItem from '../common/FileItem.svelte';
 	import Image from '../common/Image.svelte';
+
+	import TypeBtn from './TypeBtn.svelte';
 
 	import XMark from '../icons/XMark.svelte';
 	import Headphone from '../icons/Headphone.svelte';
@@ -82,6 +94,65 @@
 		webSearchEnabled
 	});
 
+	// 底部新增 按钮
+	let libraryTypes: Array<TypeBtnInfo> = [
+		// {typePart: 'library', icon: '', name: '本地知识库', id: '1'},
+		// {typePart: 'library', icon: '', name: '公共知识库', id: '2'},
+		// {typePart: 'library', icon: '', name: '互联网搜索', id: '3'},
+	];
+	$: libraryTypeLength = libraryTypes.length;
+	let activeLibraryType = '';
+
+	// 头部新增 按钮
+	let targetTypes: Array<TypeBtnInfo> = [
+		// {typePart: 'target', icon: '', name: '问政策', id: '11'},
+		// {typePart: 'target', icon: '', name: '问理论', id: '12'},
+		// {typePart: 'target', icon: '', name: '问数据', id: '13'},
+		// {typePart: 'target', icon: '', name: '问举措', id: '14'},
+		// {typePart: 'target', icon: '', name: '问灵感', id: '15'},
+	];
+	$: targetTypeLength = targetTypes.length;
+
+	let activeTargetType = '';
+
+	let getKnowledgeList: Array<any>;
+
+	/**
+	 * 获取知识库
+	 *
+	 */
+
+	(async () => {
+		const knowledgeList = await getKnowledgeBases(localStorage.token);
+
+		console.log('knowledgeList:', knowledgeList);
+
+		getKnowledgeList = knowledgeList;
+
+		knowledge.set(knowledgeList);
+
+		libraryTypes = knowledgeList.filter((item) => {
+			return (
+				item.name.includes('知识库') && {
+					name: item.name,
+					id: item.id,
+					typePart: 'library'
+				}
+			);
+		});
+		targetTypes = knowledgeList.filter((item) => {
+			return (
+				!item.name.includes('知识库') && {
+					name: item.name,
+					id: item.id,
+					typePart: 'target'
+				}
+			);
+		});
+
+		console.log('libraryTypes:', libraryTypes);
+	})();
+
 	let loaded = false;
 	let recording = false;
 
@@ -103,6 +174,38 @@
 	$: visionCapableModels = [...(atSelectedModel ? [atSelectedModel] : selectedModels)].filter(
 		(model) => $models.find((m) => m.id === model)?.info?.meta?.capabilities?.vision ?? true
 	);
+
+	const OnchangeType = async (data: TypeBtnInfo) => {
+		if (!data.name.includes('公共知识')) {
+			activeLibraryType = data.id;
+			activeTargetType = data.id;
+
+			const item = getKnowledgeList.find((item) => item.id === data.id);
+
+			files = [
+				...files,
+				{
+					...item,
+					status: 'processed',
+					type: 'collection'
+				}
+			];
+
+			prompt = removeLastWordFromString(prompt, '#');
+			const chatInputElement = document.getElementById('chat-input');
+
+			await tick();
+			chatInputElement?.focus();
+			await tick();
+		} else {
+			activeLibraryType = data.id;
+			activeTargetType = data.id;
+		}
+
+		console.log(data.id, 'eventevent', data.typePart);
+		console.log(activeLibraryType, 'eventevent');
+		console.log(activeTargetType, 'eventevent');
+	};
 
 	const scrollToBottom = () => {
 		const element = document.getElementById('messages-container');
@@ -345,6 +448,25 @@
 
 {#if loaded}
 	<div class="w-full font-primary">
+		<!-- targetTypes -->
+		<div class="types-area"></div>
+		{#if targetTypeLength > 0}
+			<div
+				class="target-types flex-wrap m-auto px-2.5 py-3 mx-aut flex gap-0.5 items-center {($settings?.widescreenMode ??
+				null)
+					? 'max-w-full'
+					: 'max-w-6xl'} "
+			>
+				{#each targetTypes as item}
+					<TypeBtn
+						btnInfo={item}
+						activeId={activeTargetType}
+						on:changeType={(event) => OnchangeType(event.detail)}
+					/>
+				{/each}
+			</div>
+		{/if}
+
 		<div class=" mx-auto inset-x-0 bg-transparent flex justify-center">
 			<div
 				class="flex flex-col px-3 {($settings?.widescreenMode ?? null)
@@ -519,7 +641,7 @@
 			</div>
 		</div>
 
-		<div class="{transparentBackground ? 'bg-transparent' : 'bg-white dark:bg-gray-900'} ">
+		<div class="{transparentBackground ? 'bg-transparent' : ' dark:bg-gray-900'} rounded-3xl">
 			<div
 				class="{($settings?.widescreenMode ?? null)
 					? 'max-w-full'
@@ -576,7 +698,9 @@
 							}}
 						>
 							<div
-								class="flex-1 flex flex-col relative w-full rounded-3xl px-1 bg-gray-600/5 dark:bg-gray-400/5 dark:text-gray-100"
+								class="{($settings?.widescreenMode ?? null)
+									? 'h-60'
+									: 'h-50'} flex-1 px-3 py-3 flex flex-col relative w-full rounded-3xl px-1 bg-white rounded-12"
 								dir={$settings?.chatDirection ?? 'LTR'}
 							>
 								{#if files.length > 0}
@@ -616,27 +740,29 @@
 															</Tooltip>
 														{/if}
 													</div>
-													<div class=" absolute -top-1 -right-1">
-														<button
-															class=" bg-white text-black border border-white rounded-full group-hover:visible invisible transition"
-															type="button"
-															on:click={() => {
-																files.splice(fileIdx, 1);
-																files = files;
-															}}
-														>
-															<svg
-																xmlns="http://www.w3.org/2000/svg"
-																viewBox="0 0 20 20"
-																fill="currentColor"
-																class="size-4"
+													{#if 0 > 1}
+														<div class=" absolute -top-1 -right-1">
+															<button
+																class=" bg-white text-black border border-white rounded-full group-hover:visible invisible transition"
+																type="button"
+																on:click={() => {
+																	files.splice(fileIdx, 1);
+																	files = files;
+																}}
 															>
-																<path
-																	d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-																/>
-															</svg>
-														</button>
-													</div>
+																<svg
+																	xmlns="http://www.w3.org/2000/svg"
+																	viewBox="0 0 20 20"
+																	fill="currentColor"
+																	class="size-4"
+																>
+																	<path
+																		d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
+																	/>
+																</svg>
+															</button>
+														</div>
+													{/if}
 												</div>
 											{:else}
 												<FileItem
@@ -668,7 +794,7 @@
 									</div>
 								{/if}
 
-								<div class="px-2.5">
+								<div class="px-2.5 flex-1">
 									{#if $settings?.richTextInput ?? true}
 										<div
 											class="scrollbar-hidden text-left bg-transparent dark:text-gray-100 outline-hidden w-full pt-3 px-1 resize-none h-fit max-h-80 overflow-auto"
@@ -713,6 +839,8 @@
 												oncompositionend={() => (isComposing = false)}
 												on:keydown={async (e) => {
 													e = e.detail.event;
+
+													console.log('key:', e.key, e.keyCode);
 
 													const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
 													const commandsContainerElement =
@@ -1101,137 +1229,152 @@
 
 								<div class=" flex justify-between mt-1.5 mb-2.5 mx-0.5 max-w-full">
 									<div class="ml-1 self-end gap-0.5 flex items-center flex-1 max-w-[80%]">
-										<InputMenu
-											bind:selectedToolIds
-											{screenCaptureHandler}
-											{inputFilesHandler}
-											uploadFilesHandler={() => {
-												filesInputElement.click();
-											}}
-											uploadGoogleDriveHandler={async () => {
-												try {
-													const fileData = await createPicker();
-													if (fileData) {
-														const file = new File([fileData.blob], fileData.name, {
-															type: fileData.blob.type
-														});
-														await uploadFileHandler(file);
-													} else {
-														console.log('No file was selected from Google Drive');
+										{#if 0 > 1}
+											<InputMenu
+												bind:selectedToolIds
+												{screenCaptureHandler}
+												{inputFilesHandler}
+												uploadFilesHandler={() => {
+													filesInputElement.click();
+												}}
+												uploadGoogleDriveHandler={async () => {
+													try {
+														const fileData = await createPicker();
+														if (fileData) {
+															const file = new File([fileData.blob], fileData.name, {
+																type: fileData.blob.type
+															});
+															await uploadFileHandler(file);
+														} else {
+															console.log('No file was selected from Google Drive');
+														}
+													} catch (error) {
+														console.error('Google Drive Error:', error);
+														toast.error(
+															$i18n.t('Error accessing Google Drive: {{error}}', {
+																error: error.message
+															})
+														);
 													}
-												} catch (error) {
-													console.error('Google Drive Error:', error);
-													toast.error(
-														$i18n.t('Error accessing Google Drive: {{error}}', {
-															error: error.message
-														})
-													);
-												}
-											}}
-											uploadOneDriveHandler={async () => {
-												try {
-													const fileData = await pickAndDownloadFile();
-													if (fileData) {
-														const file = new File([fileData.blob], fileData.name, {
-															type: fileData.blob.type || 'application/octet-stream'
-														});
-														await uploadFileHandler(file);
-													} else {
-														console.log('No file was selected from OneDrive');
+												}}
+												uploadOneDriveHandler={async () => {
+													try {
+														const fileData = await pickAndDownloadFile();
+														if (fileData) {
+															const file = new File([fileData.blob], fileData.name, {
+																type: fileData.blob.type || 'application/octet-stream'
+															});
+															await uploadFileHandler(file);
+														} else {
+															console.log('No file was selected from OneDrive');
+														}
+													} catch (error) {
+														console.error('OneDrive Error:', error);
 													}
-												} catch (error) {
-													console.error('OneDrive Error:', error);
-												}
-											}}
-											onClose={async () => {
-												await tick();
+												}}
+												onClose={async () => {
+													await tick();
 
-												const chatInput = document.getElementById('chat-input');
-												chatInput?.focus();
-											}}
-										>
-											<button
-												class="bg-transparent hover:bg-gray-100 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5 outline-hidden focus:outline-hidden"
-												type="button"
-												aria-label="More"
+													const chatInput = document.getElementById('chat-input');
+													chatInput?.focus();
+												}}
 											>
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													viewBox="0 0 20 20"
-													fill="currentColor"
-													class="size-5"
+												<button
+													class="bg-transparent hover:bg-gray-100 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5 outline-hidden focus:outline-hidden"
+													type="button"
+													aria-label="More"
 												>
-													<path
-														d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z"
+													<svg
+														xmlns="http://www.w3.org/2000/svg"
+														viewBox="0 0 20 20"
+														fill="currentColor"
+														class="size-5"
+													>
+														<path
+															d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z"
+														/>
+													</svg>
+												</button>
+											</InputMenu>
+
+											<div class="flex gap-0.5 items-center overflow-x-auto scrollbar-none flex-1">
+												{#if $_user}
+													{#if $config?.features?.enable_web_search && ($_user.role === 'admin' || $_user?.permissions?.features?.web_search)}
+														<Tooltip content={$i18n.t('Search the internet')} placement="top">
+															<button
+																on:click|preventDefault={() =>
+																	(webSearchEnabled = !webSearchEnabled)}
+																type="button"
+																class="px-1.5 @sm:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {webSearchEnabled ||
+																($settings?.webSearch ?? false) === 'always'
+																	? 'bg-blue-100 dark:bg-blue-500/20 text-blue-500 dark:text-blue-400'
+																	: 'bg-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'}"
+															>
+																<GlobeAlt className="size-5" strokeWidth="1.75" />
+																<span
+																	class="hidden @sm:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px] mr-0.5"
+																	>{$i18n.t('Web Search')}</span
+																>
+															</button>
+														</Tooltip>
+													{/if}
+
+													{#if $config?.features?.enable_image_generation && ($_user.role === 'admin' || $_user?.permissions?.features?.image_generation)}
+														<Tooltip content={$i18n.t('Generate an image')} placement="top">
+															<button
+																on:click|preventDefault={() =>
+																	(imageGenerationEnabled = !imageGenerationEnabled)}
+																type="button"
+																class="px-1.5 @sm:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {imageGenerationEnabled
+																	? 'bg-gray-100 dark:bg-gray-500/20 text-gray-600 dark:text-gray-400'
+																	: 'bg-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 '}"
+															>
+																<Photo className="size-5" strokeWidth="1.75" />
+																<span
+																	class="hidden @sm:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px] mr-0.5"
+																	>{$i18n.t('Image')}</span
+																>
+															</button>
+														</Tooltip>
+													{/if}
+
+													{#if $config?.features?.enable_code_interpreter && ($_user.role === 'admin' || $_user?.permissions?.features?.code_interpreter)}
+														<Tooltip content={$i18n.t('Execute code for analysis')} placement="top">
+															<button
+																on:click|preventDefault={() =>
+																	(codeInterpreterEnabled = !codeInterpreterEnabled)}
+																type="button"
+																class="px-1.5 @sm:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {codeInterpreterEnabled
+																	? 'bg-gray-100 dark:bg-gray-500/20 text-gray-600 dark:text-gray-400'
+																	: 'bg-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 '}"
+															>
+																<CommandLine className="size-5" strokeWidth="1.75" />
+																<span
+																	class="hidden @sm:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px] mr-0.5"
+																	>{$i18n.t('Code Interpreter')}</span
+																>
+															</button>
+														</Tooltip>
+													{/if}
+												{/if}
+											</div>
+										{/if}
+
+										{#if libraryTypeLength > 0}
+											<div class="library-types flex gap-0.5 px-2.5 items-center flex-wrap">
+												{#each libraryTypes as item}
+													<TypeBtn
+														btnInfo={item}
+														activeId={activeLibraryType}
+														on:changeType={(event) => OnchangeType(event.detail)}
 													/>
-												</svg>
-											</button>
-										</InputMenu>
-
-										<div class="flex gap-0.5 items-center overflow-x-auto scrollbar-none flex-1">
-											{#if $_user}
-												{#if $config?.features?.enable_web_search && ($_user.role === 'admin' || $_user?.permissions?.features?.web_search)}
-													<Tooltip content={$i18n.t('Search the internet')} placement="top">
-														<button
-															on:click|preventDefault={() => (webSearchEnabled = !webSearchEnabled)}
-															type="button"
-															class="px-1.5 @sm:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {webSearchEnabled ||
-															($settings?.webSearch ?? false) === 'always'
-																? 'bg-blue-100 dark:bg-blue-500/20 text-blue-500 dark:text-blue-400'
-																: 'bg-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'}"
-														>
-															<GlobeAlt className="size-5" strokeWidth="1.75" />
-															<span
-																class="hidden @sm:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px] mr-0.5"
-																>{$i18n.t('Web Search')}</span
-															>
-														</button>
-													</Tooltip>
-												{/if}
-
-												{#if $config?.features?.enable_image_generation && ($_user.role === 'admin' || $_user?.permissions?.features?.image_generation)}
-													<Tooltip content={$i18n.t('Generate an image')} placement="top">
-														<button
-															on:click|preventDefault={() =>
-																(imageGenerationEnabled = !imageGenerationEnabled)}
-															type="button"
-															class="px-1.5 @sm:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {imageGenerationEnabled
-																? 'bg-gray-100 dark:bg-gray-500/20 text-gray-600 dark:text-gray-400'
-																: 'bg-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 '}"
-														>
-															<Photo className="size-5" strokeWidth="1.75" />
-															<span
-																class="hidden @sm:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px] mr-0.5"
-																>{$i18n.t('Image')}</span
-															>
-														</button>
-													</Tooltip>
-												{/if}
-
-												{#if $config?.features?.enable_code_interpreter && ($_user.role === 'admin' || $_user?.permissions?.features?.code_interpreter)}
-													<Tooltip content={$i18n.t('Execute code for analysis')} placement="top">
-														<button
-															on:click|preventDefault={() =>
-																(codeInterpreterEnabled = !codeInterpreterEnabled)}
-															type="button"
-															class="px-1.5 @sm:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {codeInterpreterEnabled
-																? 'bg-gray-100 dark:bg-gray-500/20 text-gray-600 dark:text-gray-400'
-																: 'bg-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 '}"
-														>
-															<CommandLine className="size-5" strokeWidth="1.75" />
-															<span
-																class="hidden @sm:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px] mr-0.5"
-																>{$i18n.t('Code Interpreter')}</span
-															>
-														</button>
-													</Tooltip>
-												{/if}
-											{/if}
-										</div>
+												{/each}
+											</div>
+										{/if}
 									</div>
 
 									<div class="self-end flex space-x-1 mr-1 shrink-0">
-										{#if !history?.currentId || history.messages[history.currentId]?.done == true}
+										{#if 0 > 1 && (!history?.currentId || history.messages[history.currentId]?.done == true)}
 											<Tooltip content={$i18n.t('Record voice')}>
 												<button
 													id="voice-input-button"
@@ -1281,102 +1424,111 @@
 										{/if}
 
 										{#if !history.currentId || history.messages[history.currentId]?.done == true}
-											{#if prompt === '' && files.length === 0}
-												<div class=" flex items-center">
-													<Tooltip content={$i18n.t('Call')}>
-														<button
-															class=" {webSearchEnabled ||
-															($settings?.webSearch ?? false) === 'always'
-																? 'bg-blue-500 text-white hover:bg-blue-400 '
-																: 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100'} transition rounded-full p-1.5 self-center"
-															type="button"
-															on:click={async () => {
-																if (selectedModels.length > 1) {
-																	toast.error($i18n.t('Select only one model to call'));
-
-																	return;
-																}
-
-																if ($config.audio.stt.engine === 'web') {
-																	toast.error(
-																		$i18n.t(
-																			'Call feature is not supported when using Web STT engine'
-																		)
-																	);
-
-																	return;
-																}
-																// check if user has access to getUserMedia
-																try {
-																	let stream = await navigator.mediaDevices.getUserMedia({
-																		audio: true
-																	});
-																	// If the user grants the permission, proceed to show the call overlay
-
-																	if (stream) {
-																		const tracks = stream.getTracks();
-																		tracks.forEach((track) => track.stop());
-																	}
-
-																	stream = null;
-
-																	if ($settings.audio?.tts?.engine === 'browser-kokoro') {
-																		// If the user has not initialized the TTS worker, initialize it
-																		if (!$TTSWorker) {
-																			await TTSWorker.set(
-																				new KokoroWorker({
-																					dtype: $settings.audio?.tts?.engineConfig?.dtype ?? 'fp32'
-																				})
-																			);
-
-																			await $TTSWorker.init();
-																		}
-																	}
-
-																	showCallOverlay.set(true);
-																	showControls.set(true);
-																} catch (err) {
-																	// If the user denies the permission or an error occurs, show an error message
-																	toast.error(
-																		$i18n.t('Permission denied when accessing media devices')
-																	);
-																}
-															}}
-															aria-label="Call"
-														>
-															<Headphone className="size-5" />
-														</button>
-													</Tooltip>
-												</div>
-											{:else}
-												<div class=" flex items-center">
-													<Tooltip content={$i18n.t('Send message')}>
-														<button
-															id="send-message-button"
-															class="{!(prompt === '' && files.length === 0)
-																? webSearchEnabled || ($settings?.webSearch ?? false) === 'always'
+											{#if 0 > 1}
+												{#if prompt === '' && files.length === 0}
+													<div class=" flex items-center">
+														<Tooltip content={$i18n.t('Call')}>
+															<button
+																class=" {webSearchEnabled ||
+																($settings?.webSearch ?? false) === 'always'
 																	? 'bg-blue-500 text-white hover:bg-blue-400 '
-																	: 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
-																: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 self-center"
-															type="submit"
-															disabled={prompt === '' && files.length === 0}
-														>
-															<svg
-																xmlns="http://www.w3.org/2000/svg"
-																viewBox="0 0 16 16"
-																fill="currentColor"
-																class="size-5"
+																	: 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100'} transition rounded-full p-1.5 self-center"
+																type="button"
+																on:click={async () => {
+																	if (selectedModels.length > 1) {
+																		toast.error($i18n.t('Select only one model to call'));
+
+																		return;
+																	}
+
+																	if ($config.audio.stt.engine === 'web') {
+																		toast.error(
+																			$i18n.t(
+																				'Call feature is not supported when using Web STT engine'
+																			)
+																		);
+
+																		return;
+																	}
+																	// check if user has access to getUserMedia
+																	try {
+																		let stream = await navigator.mediaDevices.getUserMedia({
+																			audio: true
+																		});
+																		// If the user grants the permission, proceed to show the call overlay
+
+																		if (stream) {
+																			const tracks = stream.getTracks();
+																			tracks.forEach((track) => track.stop());
+																		}
+
+																		stream = null;
+
+																		if ($settings.audio?.tts?.engine === 'browser-kokoro') {
+																			// If the user has not initialized the TTS worker, initialize it
+																			if (!$TTSWorker) {
+																				await TTSWorker.set(
+																					new KokoroWorker({
+																						dtype:
+																							$settings.audio?.tts?.engineConfig?.dtype ?? 'fp32'
+																					})
+																				);
+
+																				await $TTSWorker.init();
+																			}
+																		}
+
+																		showCallOverlay.set(true);
+																		showControls.set(true);
+																	} catch (err) {
+																		// If the user denies the permission or an error occurs, show an error message
+																		toast.error(
+																			$i18n.t('Permission denied when accessing media devices')
+																		);
+																	}
+																}}
+																aria-label="Call"
 															>
-																<path
-																	fill-rule="evenodd"
-																	d="M8 14a.75.75 0 0 1-.75-.75V4.56L4.03 7.78a.75.75 0 0 1-1.06-1.06l4.5-4.5a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06L8.75 4.56v8.69A.75.75 0 0 1 8 14Z"
-																	clip-rule="evenodd"
-																/>
-															</svg>
-														</button>
-													</Tooltip>
-												</div>
+																<Headphone className="size-5" />
+															</button>
+														</Tooltip>
+													</div>
+												{:else}
+													<div class=" flex items-center">
+														<Tooltip content={$i18n.t('Send message')}>
+															<button
+																id="send-message-button"
+																class="{!(prompt === '' && files.length === 0)
+																	? webSearchEnabled || ($settings?.webSearch ?? false) === 'always'
+																		? 'bg-blue-500 text-white hover:bg-blue-400 '
+																		: 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
+																	: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 self-center"
+																type="submit"
+																disabled={prompt === '' && files.length === 0}
+															>
+																发送
+															</button>
+														</Tooltip>
+													</div>
+												{/if}
 											{/if}
+
+											<div class=" flex items-center">
+												<Tooltip content={$i18n.t('Send message')}>
+													<button
+														id="send-message-button"
+														class="{!(prompt === '' && files.length === 0)
+															? webSearchEnabled || ($settings?.webSearch ?? false) === 'always'
+																? 'bg-blue-500 text-white hover:bg-blue-400 '
+																: 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
+															: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 self-center"
+														type="submit"
+														disabled={prompt === '' && files.length === 0}
+													>
+														发送
+													</button>
+												</Tooltip>
+											</div>
 										{:else}
 											<div class=" flex items-center">
 												<Tooltip content={$i18n.t('Stop')}>
@@ -1412,3 +1564,10 @@
 		</div>
 	</div>
 {/if}
+
+<style>
+	.library-types {
+		display: flex;
+		align-items: center;
+	}
+</style>
