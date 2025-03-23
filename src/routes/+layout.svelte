@@ -489,12 +489,11 @@
 		}
 
 		if (backendConfig) {
-
-      console.log('Backend config:', backendConfig);
+			console.log('Backend config:', backendConfig);
 
 			// Save Backend Status to Store
 			await config.set(backendConfig);
-			await WEBUI_NAME.set(backendConfig.name);
+			await WEBUI_NAME.set('问长江' || backendConfig.name);
 
 			if ($config) {
 				await setupSocket($config.features?.enable_websocket ?? true);

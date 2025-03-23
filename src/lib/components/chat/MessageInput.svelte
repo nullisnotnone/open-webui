@@ -1517,7 +1517,9 @@
 												<Tooltip content={$i18n.t('Send message')}>
 													<button
 														id="send-message-button"
-														class="flex items-center justify-center {!(prompt === '' && files.length === 0)
+														class="flex items-center justify-center {!(
+															prompt === '' && files.length === 0
+														)
 															? webSearchEnabled || ($settings?.webSearch ?? false) === 'always'
 																? 'bg-blue-500 text-white hover:bg-blue-400 '
 																: 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
@@ -1525,8 +1527,12 @@
 														type="submit"
 														disabled={prompt === '' && files.length === 0}
 													>
-                            <img src={`${WEBUI_BASE_URL}/static/btn-send.png`} class="mr-2" alt="">
-														<div class="btn-txt">发送</div>
+														<img
+															src={`${WEBUI_BASE_URL}/static/btn-send.png`}
+															class="mr-2"
+															alt=""
+														/>
+														<div class="btn-txt dark:text-white">发送</div>
 													</button>
 												</Tooltip>
 											</div>
